@@ -11,14 +11,14 @@ import zio.spark.sql.implicits._
 import org.apache.log4j.{Level, Logger}
 
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.sql.SaveMode
 
 object App extends ZIOAppDefault {
 
   import zio.spark.sql.TryAnalysis.syntax.throwAnalysisException
 
 //  val pathInputParquet =  "/Users/raphaelmansuy/Downloads/dkt_tables/bronze/store_item_follow"
-  val pathInputParquet = "/Users/raphaelmansuy/Downloads/input_parquet/"
+  val pathInputParquet =
+    "s3a://ookla-open-data/parquet/performance/type=fixed/year=2022" // "/Users/raphaelmansuy/Downloads/input_parquet/"
   val pathOutputParquet = "/Users/raphaelmansuy/Downloads/output_parquet/"
   val pathOutputParquetRepartition =
     "/Users/raphaelmansuy/Downloads/output_parquet_repartition/"
@@ -30,10 +30,18 @@ object App extends ZIOAppDefault {
   def read: SIO[DataFrame] = DataFrameUtil.readPaquet(pathInputParquet)
 
   val pipelineCalculateNbRows =
-    Pipeline(read, DataFrameUtil.identityTransform, DataFrameUtil.calculateNbRows)
+    Pipeline(
+      read,
+      DataFrameUtil.identityTransform,
+      DataFrameUtil.calculateNbRows
+    )
 
   val pipelineCalculateEstimatedSize =
-    Pipeline(read, DataFrameUtil.identityTransform, DataFrameUtil.estimatedSizeDataFrame)
+    Pipeline(
+      read,
+      DataFrameUtil.identityTransform,
+      DataFrameUtil.estimatedSizeDataFrame
+    )
 
   def calculateNbRows: SIO[Unit] = for {
     _ <- ZIO.log("Calculating number of rows")
@@ -68,7 +76,6 @@ object App extends ZIOAppDefault {
 
   } yield ()
 
-
   private val session: ZLayer[Any, Throwable, SparkSession] =
     ZLayer.scoped {
       val disableSparkLogging: UIO[Unit] =
@@ -79,8 +86,27 @@ object App extends ZIOAppDefault {
       val builder: SparkSession.Builder =
         SparkSession.builder.master(localAllNodes).appName(appName)
 
+      // configure S3 access
+      val builderWithS3 = builder
+        .config("spark.hadoop.fs.s3a.access.key", "AKIAJ2Z7Z7Z7Z7Z7Z7Z7")
+        .config("spark.hadoop.fs.s3a.secret.key", "secret")
+        .config(
+          "spark.hadoop.fs.s3a.impl",
+          "org.apache.hadoop.fs.s3a.S3AFileSystem"
+        )
+        .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com")
+        .config("spark.hadoop.fs.s3a.path.style.access", "true")
+        .config(
+          "fs.s3a.aws.credentials.provider",
+          "org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider"
+        )
+        .config("spark.hadoop.fs.s3a.connection.maximum", "1000")
+        .config("spark.hadoop.fs.s3a.attempts.maximum", "100")
+
+      val finalBuilder = builderWithS3
+
       val build: ZIO[Scope, Throwable, SparkSession] =
-        builder.getOrCreate.withFinalizer { ss =>
+        finalBuilder.getOrCreate.withFinalizer { ss =>
           ZIO.logInfo("Closing Spark Session ...") *>
             ss.close
               .tapError(_ => ZIO.logError("Failed to close the Spark Session."))
