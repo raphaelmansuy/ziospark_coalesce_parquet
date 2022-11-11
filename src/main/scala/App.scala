@@ -1,4 +1,4 @@
-package elitizon.ziospark.coalesce 
+package elitizon.ziospark.coalesce
 
 import org.apache.spark.sql.Row
 
@@ -28,23 +28,10 @@ object App extends ZIOAppDefault {
   val blockSize128 = 128 * 1024 * 1024
   val blockSize64 = 64 * 1024 * 1024
 
-  def read: SIO[DataFrame] = { readPaquet(pathInputParquet) }
+  def read: SIO[DataFrame] = DataFrameUtil.readPaquet(pathInputParquet)
+
   def repartition(inputDF: DataFrame, numPartitions: Int) = {
     inputDF.repartition(numPartitions)
-  }
-  def action(inputDF: DataFrame) = {
-    for {
-      dfPersisted <- inputDF.persist(StorageLevel.MEMORY_AND_DISK)
-      dfResult <- dfPersisted.write
-        .options(
-          Map(
-            "compression" -> "snappy",
-            "parquet.block.size" -> f"$blockSize64"
-          )
-        )
-        .mode(SaveMode.Overwrite)
-        .parquet(pathOutputParquet)
-    } yield inputDF
   }
 
   def actionCalculateNbRows(inputDF: DataFrame) = {
@@ -64,6 +51,7 @@ object App extends ZIOAppDefault {
 
   val pipelineCalculateNbRows =
     Pipeline(read, identityTransform, actionCalculateNbRows)
+
   val pipelineCalculateEstimatedSize =
     Pipeline(read, identityTransform, actionCalulateEstimatedSize)
 
@@ -88,8 +76,14 @@ object App extends ZIOAppDefault {
 
     _ <- ZIO.log(s"\n🔥🔥🔥🔥 numPartitions: $numPartitions 🔥🔥🔥🔥")
 
-    _ <- ZIO.log(s"\n🥳 Running pipeline with numPartitions: 1\n")
-    _ <- Pipeline(read, { df => repartition(df, numPartitions) }, action).run
+    _ <- ZIO.log(s"\n🥳 Running pipeline with numPartitions: $numPartitions\n")
+    _ <- Pipeline(
+      read, // Read
+      { df => repartition(df, numPartitions) }, // Transformaton
+      { df => DataFrameUtil.writeParquet(df, pathOutputParquet) } // Action
+    ).run
+    _ <- ZIO.log(s"\n🥳 End pipeline with numPartitions: $numPartitions\n")
+
     _ <- ZIO.log("\n🚀 🚀 🚀 Application finished\n")
 
   } yield ()

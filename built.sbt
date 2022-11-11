@@ -1,4 +1,5 @@
-name         := "simple-app"
+name         := "ziospark-parquet-coalesce"
+
 scalaVersion := "2.12.17"
 
 libraryDependencies ++= Seq(
