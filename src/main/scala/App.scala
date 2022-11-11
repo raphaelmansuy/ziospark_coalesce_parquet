@@ -10,7 +10,6 @@ import zio.spark.sql._
 import zio.spark.sql.implicits._
 import org.apache.log4j.{Level, Logger}
 
-// Import SaveMode
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.sql.SaveMode
 
@@ -30,30 +29,11 @@ object App extends ZIOAppDefault {
 
   def read: SIO[DataFrame] = DataFrameUtil.readPaquet(pathInputParquet)
 
-  def repartition(inputDF: DataFrame, numPartitions: Int) = {
-    inputDF.repartition(numPartitions)
-  }
-
-  def actionCalculateNbRows(inputDF: DataFrame) = {
-    for {
-      count <- inputDF.count
-    } yield count
-  }
-
-  def actionCalulateEstimatedSize(inputDF: DataFrame) = {
-    for {
-      estimatedSizeSample <- inputDF.sample(0.01).rdd.map(_.size).reduce(_ + _)
-      estimatedSize = (estimatedSizeSample * 100.0)
-    } yield estimatedSize
-  }
-
-  def identityTransform(inputDF: DataFrame) = { inputDF }
-
   val pipelineCalculateNbRows =
-    Pipeline(read, identityTransform, actionCalculateNbRows)
+    Pipeline(read, DataFrameUtil.identityTransform, DataFrameUtil.calculateNbRows)
 
   val pipelineCalculateEstimatedSize =
-    Pipeline(read, identityTransform, actionCalulateEstimatedSize)
+    Pipeline(read, DataFrameUtil.identityTransform, DataFrameUtil.estimatedSizeDataFrame)
 
   def calculateNbRows: SIO[Unit] = for {
     _ <- ZIO.log("Calculating number of rows")
@@ -79,7 +59,7 @@ object App extends ZIOAppDefault {
     _ <- ZIO.log(s"\n🥳 Running pipeline with numPartitions: $numPartitions\n")
     _ <- Pipeline(
       read, // Read
-      { df => repartition(df, numPartitions) }, // Transformaton
+      { df => DataFrameUtil.repartition(df, numPartitions) }, // Transformaton
       { df => DataFrameUtil.writeParquet(df, pathOutputParquet) } // Action
     ).run
     _ <- ZIO.log(s"\n🥳 End pipeline with numPartitions: $numPartitions\n")
@@ -88,21 +68,16 @@ object App extends ZIOAppDefault {
 
   } yield ()
 
-  def readPaquet(path: String): SIO[DataFrame] =
-    for {
-      _ <- ZIO.log(s"\n🎬 Reading parquet files: $path")
-      df <- SparkSession.read.parquet(path)
-      dfPersisted <- df.persist(StorageLevel.MEMORY_AND_DISK_SER)
-      _ <- ZIO.log("\n🏁 End reading parquet files")
-    } yield dfPersisted
 
   private val session: ZLayer[Any, Throwable, SparkSession] =
     ZLayer.scoped {
       val disableSparkLogging: UIO[Unit] =
         ZIO.succeed(Logger.getLogger("org").setLevel(Level.OFF))
 
+      val appName = "ziospark-parquet-coalesce"
+
       val builder: SparkSession.Builder =
-        SparkSession.builder.master(localAllNodes).appName("zio-ecosystem")
+        SparkSession.builder.master(localAllNodes).appName(appName)
 
       val build: ZIO[Scope, Throwable, SparkSession] =
         builder.getOrCreate.withFinalizer { ss =>
