@@ -10,6 +10,8 @@ import zio.spark.sql._
 import zio.spark.sql.implicits._
 import org.apache.log4j.{Level, Logger}
 
+import org.apache.spark.util.SizeEstimator
+
 // Import SaveMode
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.sql.SaveMode
@@ -54,16 +56,37 @@ object DataFrameUtil {
     inputDF.repartition(numPartitions)
   }
 
-	def calculateNbRows(inputDF: DataFrame) = {
+  def calculateNbRows(inputDF: DataFrame) = {
     for {
       count <- inputDF.count
     } yield count
   }
-
+  // Calculate the estimated size of a dataframe
   def estimatedSizeDataFrame(inputDF: DataFrame) = {
+
     for {
-      estimatedSizeSample <- inputDF.sample(0.01).rdd.map(_.size).reduce(_ + _)
-      estimatedSize = (estimatedSizeSample * 100.0)
+      tempDirPath <- ZIO.succeed("/Users/raphaelmansuy/Downloads/temp_dir")
+      // Get a sample of 1% of the dataframe and return a new dataframe
+      dfSample <- ZIO.succeed(inputDF.sample(0.01))
+      // Get the number of rows in the sample dataframe
+      // create a temporary directory to store parquet files
+
+      // save the dataframe to the temporary directory
+      _ <- writeParquet(dfSample, tempDirPath)
+      // evaluate the size parquet files
+      estimatedSizeSample <- ZIO.attempt(
+        java.nio.file.Files.size(java.nio.file.Paths.get(tempDirPath))
+      )
+      estimatedSize <- ZIO.succeed((estimatedSizeSample * 100.0).toLong)
+      // delete the temporary directory
+      /*_ <- ZIO.attempt(
+        java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(tempDirPath))
+      )*/
+      // display the estimated size
+      _ <- ZIO.log(
+        s"📊 Estimated size of the sample dataframe: $estimatedSizeSample"
+      )
+      _ <- ZIO.log(s"📊 Estimated size of the dataframe: $estimatedSize")
     } yield estimatedSize
   }
 
