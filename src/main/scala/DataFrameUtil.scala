@@ -34,7 +34,8 @@ object DataFrameUtil {
     for {
       _ <- ZIO.log(s"\n🎬 Reading parquet files: $path")
       df <- SparkSession.read.parquet(path)
-      dfPersisted <- df.persist(StorageLevel.MEMORY_AND_DISK_SER)
+      // Disk only (StorageLevel.DISK_ONLY) 
+      dfPersisted <- df.persist(StorageLevel.DISK_ONLY)
       _ <- ZIO.log("\n🏁 End reading parquet files")
     } yield dfPersisted
 

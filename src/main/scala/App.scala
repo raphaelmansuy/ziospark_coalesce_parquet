@@ -17,8 +17,12 @@ object App extends ZIOAppDefault {
   import zio.spark.sql.TryAnalysis.syntax.throwAnalysisException
 
 //  val pathInputParquet =  "/Users/raphaelmansuy/Downloads/dkt_tables/bronze/store_item_follow"
-  val pathInputParquet =
-    "s3a://ookla-open-data/parquet/performance/type=fixed/year=2022" // "/Users/raphaelmansuy/Downloads/input_parquet/"
+  //val pathInputParquet =
+  //  "s3a://ookla-open-data/parquet/performance/type=fixed/year=2022" // "/Users/raphaelmansuy/Downloads/input_parquet/"
+
+    val pathInputParquet =
+    "s3a://ookla-open-data/parquet/performance/" // "/Users/raphaelmansuy/Downloads/input_parquet/"  
+
   val pathOutputParquet = "/Users/raphaelmansuy/Downloads/output_parquet/"
   val pathOutputParquetRepartition =
     "/Users/raphaelmansuy/Downloads/output_parquet_repartition/"
@@ -55,7 +59,7 @@ object App extends ZIOAppDefault {
     _ <- ZIO.log("\n🚀 🚀 🚀 Application started\n")
 
     estimatedSize <- pipelineEstimatedSizeDataFrame.run
-    numPartitions <- ZIO.succeed(estimatedSize / blockSize128).map(_.toInt)
+    numPartitions <- ZIO.succeed(estimatedSize / blockSize64).map(_.toInt)
 
     _ <- ZIO.log(s"\n🥳 Running pipeline with numPartitions: $numPartitions\n")
     _ <- Pipeline(
