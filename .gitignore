@@ -15,3 +15,4 @@ project/.bloop
 project/.metals
 project/.target
 project/metals.sbt
+.DS_Store

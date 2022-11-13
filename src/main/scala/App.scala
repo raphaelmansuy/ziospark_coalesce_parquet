@@ -36,7 +36,7 @@ object App extends ZIOAppDefault {
       DataFrameUtil.calculateNbRows
     )
 
-  val pipelineCalculateEstimatedRow =
+  val pipelineEstimatedSizeDataFrame =
     Pipeline(
       read,
       DataFrameUtil.identityTransform,
@@ -54,13 +54,8 @@ object App extends ZIOAppDefault {
 
     _ <- ZIO.log("\n🚀 🚀 🚀 Application started\n")
 
-    estimatedSizeRow <- pipelineCalculateEstimatedRow.run
-
-    nbRows <- pipelineCalculateNbRows.run
-
-    estimatedSize <- ZIO.succeed(estimatedSizeRow.toInt * nbRows)
-
-    numPartitions <- ZIO.succeed(estimatedSize / blockSize64).map(_.toInt)
+    estimatedSize <- pipelineEstimatedSizeDataFrame.run
+    numPartitions <- ZIO.succeed(estimatedSize / blockSize128).map(_.toInt)
 
     _ <- ZIO.log(s"\n🥳 Running pipeline with numPartitions: $numPartitions\n")
     _ <- Pipeline(
@@ -70,8 +65,6 @@ object App extends ZIOAppDefault {
     ).run
     _ <- ZIO.log(s"\n🥳 End pipeline with numPartitions: $numPartitions\n")
 
-    _ <- ZIO.log(s"✅ estimatedSizeRow: ${estimatedSizeRow}  🔥🔥🔥🔥")
-    _ <- ZIO.log(s"✅ nbRows: ${nbRows} 🔥🔥🔥🔥")
     _ <- ZIO.log(s"✅ estimatedSize: ${estimatedSize} 🔥🔥🔥🔥")
     _ <- ZIO.log(s"✅ numPartitions: $numPartitions 🔥🔥🔥🔥")
 

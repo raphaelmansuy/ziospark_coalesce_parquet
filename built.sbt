@@ -2,7 +2,7 @@ name := "ziospark-parquet-coalesce"
 
 scalaVersion := "2.12.17"
 
-val sparkVersion = "3.3.1"
+val sparkVersion = "3.2.1"
 val zioVersion = "2.0.3"
 
 libraryDependencies ++= Seq(
