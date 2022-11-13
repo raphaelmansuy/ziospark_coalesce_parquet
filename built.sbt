@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   "dev.zio" %% "zio" % zioVersion, // https://index.scala-lang.org/zio/zio/zio
   "dev.zio" %% "zio-test" % zioVersion % "test", // https://mvnrepository.com/artifact/dev.zio/zio-test
   "dev.zio" %% "zio-test-sbt" % zioVersion % "test", // https://mvnrepository.com/artifact/dev.zio/zio-test-sbt
+  "dev.zio" %% "zio-cli" %  "0.2.8", // https://mvnrepository.com/artifact/dev.zio/zio-cli
 )
 
 testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework"))

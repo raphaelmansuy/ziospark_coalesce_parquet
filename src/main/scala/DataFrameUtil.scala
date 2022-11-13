@@ -16,7 +16,6 @@ import org.apache.spark.sql.SaveMode
 import org.apache.commons.io.FileUtils
 import java.nio.file.Files._
 
-
 // a set of utility functions to work with DataFrame
 object DataFrameUtil {
 
@@ -32,30 +31,34 @@ object DataFrameUtil {
   // and return a DataFrame
   def readParquetAndPersist(path: String): SIO[DataFrame] =
     for {
-      _ <- ZIO.log(s"\n🎬 Reading parquet files: $path")
+      _ <- ZIO.log(s"🎬 Reading parquet files: $path")
       df <- SparkSession.read.parquet(path)
       // persist in memory and disk
       _ <- ZIO.log(s"Persisting in memory and disk")
       dfPersisted <- df.persist(StorageLevel.MEMORY_AND_DISK)
-      _ <- ZIO.log("\n🏁 End reading parquet files")
+      _ <- ZIO.log("🏁 End reading parquet files")
     } yield dfPersisted
 
   def readParquet(path: String): SIO[DataFrame] =
     for {
-      _ <- ZIO.log(s"\n🎬 Reading parquet files: $path")
+      _ <- ZIO.log(s"🎬 Reading parquet files: $path")
       df <- SparkSession.read.parquet(path)
-      _ <- ZIO.log("\n🏁 End reading parquet files")
+      _ <- ZIO.log("🏁 End reading parquet files")
     } yield df
 
   // Write a dataframe to a a path uing the snappy compression
-  // and a block size of 64MB
-  def writeParquet(inputDF: DataFrame, pathOutputParquet: String) = {
+  // and a block size with default value blockSize128
+  def writeParquet(
+      inputDF: DataFrame,
+      pathOutputParquet: String,
+      parquetBlockSize: Int = blockSize128
+  ) = {
     for {
       dfResult <- inputDF.write
         .options(
           Map(
             "compression" -> "snappy",
-            "parquet.block.size" -> f"$blockSize64"
+            "parquet.block.size" -> f"$parquetBlockSize"
           )
         )
         .mode(SaveMode.Overwrite)
@@ -73,9 +76,8 @@ object DataFrameUtil {
     } yield count
   }
 
- 
   def deleteDirectory(path: java.nio.file.Path) = {
-    for {     
+    for {
       _ <- ZIO.attempt(FileUtils.deleteDirectory(path.toFile))
     } yield ()
   }

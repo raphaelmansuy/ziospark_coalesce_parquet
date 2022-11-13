@@ -12,6 +12,21 @@ import elitizon.ziospark.coalesce._
 
 object AppSpec extends ZIOSpecDefault {
 
+  // calculate the size of files in a directory in bytes recursively
+  def calculateSizeOfFilesInDir(path: String): Long = {
+    val dir = new java.io.File(path)
+    val files = dir.listFiles
+    var size: Long = 0
+    for (file <- files) {
+      if (file.isFile) {
+        size += file.length
+      } else {
+        size += calculateSizeOfFilesInDir(file.getAbsolutePath)
+      }
+    }
+    size
+  }
+
   val readData = 
     suite("Read data")(
       test("read a DataFrame from a parquet file") {
@@ -30,13 +45,13 @@ object AppSpec extends ZIOSpecDefault {
     suite("Estimate size of a DataFrame")(
       test("estimate the size of a DataFrame") {
         for {
+          sizeInDir <- ZIO.attempt(calculateSizeOfFilesInDir("./resources/data"))
           df <- DataFrameUtil.readParquet("./resources/data")
           estimatedSize <- DataFrameUtil.estimatedSizeDataFrame(df)
           // display the estimated size of the DataFrame
           _ <- ZIO.log(s"🚀 Estimated size of the DataFrame: ${estimatedSize}")
-        // the estimated size of the DataFrame should by 9.5MB + or - 40%
         } yield assert(estimatedSize)(
-          isGreaterThanEqualTo((9.5 * 1024 * 1024 * 0.6).toLong) && isLessThanEqualTo((9.5 * 1024 * 1024 * 1.4).toLong)
+          isGreaterThanEqualTo((sizeInDir * 0.6).toLong) && isLessThanEqualTo((sizeInDir * 1.4).toLong)
         )
       }
     )
