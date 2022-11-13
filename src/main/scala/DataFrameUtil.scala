@@ -30,14 +30,22 @@ object DataFrameUtil {
 
   // Read parquet file from a path in memory and disk (StorageLevel.MEMORY_AND_DISK)
   // and return a DataFrame
-  def readPaquet(path: String): SIO[DataFrame] =
+  def readParquetAndPersist(path: String): SIO[DataFrame] =
     for {
       _ <- ZIO.log(s"\n🎬 Reading parquet files: $path")
       df <- SparkSession.read.parquet(path)
-      // Disk only (StorageLevel.DISK_ONLY) 
+      // persist in memory and disk
+      _ <- ZIO.log(s"Persisting in memory and disk")
       dfPersisted <- df.persist(StorageLevel.MEMORY_AND_DISK)
       _ <- ZIO.log("\n🏁 End reading parquet files")
     } yield dfPersisted
+
+  def readParquet(path: String): SIO[DataFrame] =
+    for {
+      _ <- ZIO.log(s"\n🎬 Reading parquet files: $path")
+      df <- SparkSession.read.parquet(path)
+      _ <- ZIO.log("\n🏁 End reading parquet files")
+    } yield df
 
   // Write a dataframe to a a path uing the snappy compression
   // and a block size of 64MB
