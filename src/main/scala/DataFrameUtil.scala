@@ -16,8 +16,8 @@ import org.apache.spark.sql.SaveMode
 import org.apache.commons.io.FileUtils
 import java.nio.file.Files._
 
-// import ZManaged
 
+// a set of utility functions to work with DataFrame
 object DataFrameUtil {
 
   // block size 128MB

@@ -12,6 +12,7 @@ import org.apache.log4j.{Level, Logger}
 
 import org.apache.spark.storage.StorageLevel
 
+// A cli app that reads a parquet file, coalesce it and write it to a new parquet file
 object App extends ZIOAppDefault {
 
   import zio.spark.sql.TryAnalysis.syntax.throwAnalysisException

@@ -27,11 +27,6 @@ object SparkSessionLayer {
         SparkSession.builder
           .master(localAllNodes)
           .appName(appName)
-          // store data on disk to avoid memory overflow
-          .config("spark.sql.autoBroadcastJoinThreshold", -1)
-          
-
-          
 
       // configure S3 access
       val builderWithS3 = builder
