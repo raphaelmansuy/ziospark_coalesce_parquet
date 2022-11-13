@@ -16,7 +16,7 @@ object AppSpec extends ZIOSpecDefault {
     suite("Read data")(
       test("read a DataFrame from a parquet file") {
         for {
-          df <- DataFrameUtil.readPaquet("./resources/data")
+          df <- DataFrameUtil.readParquet("./resources/data")
           count <- DataFrameUtil.calculateNbRows(df)
           // show the fist 200 lines of the DataFrame
           //_ <- df.show(200)
@@ -30,13 +30,14 @@ object AppSpec extends ZIOSpecDefault {
     suite("Estimate size of a DataFrame")(
       test("estimate the size of a DataFrame") {
         for {
-          df <- DataFrameUtil.readPaquet("./resources/data")
+          df <- DataFrameUtil.readParquet("./resources/data")
           estimatedSize <- DataFrameUtil.estimatedSizeDataFrame(df)
           // display the estimated size of the DataFrame
           _ <- ZIO.log(s"🚀 Estimated size of the DataFrame: ${estimatedSize}")
+        // the estimated size of the DataFrame should by 9.5MB + or - 40%
         } yield assert(estimatedSize)(
-          isGreaterThanEqualTo(0L)
-        ) // assert the size of the DataFrame more than 1M
+          isGreaterThanEqualTo((9.5 * 1024 * 1024 * 0.6).toLong) && isLessThanEqualTo((9.5 * 1024 * 1024 * 1.4).toLong)
+        )
       }
     )
   
