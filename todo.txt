@@ -1,0 +1,10 @@
+//  val pathInputParquet =
+//    "/Users/raphaelmansuy/Downloads/dkt_tables/bronze/store_item_follow"
+//  val pathInputParquet =
+//    "s3a://ookla-open-data/parquet/performance/type=fixed/year=2022"
+
+//  val pathInputParquet =
+//    "s3a://ookla-open-data/parquet/performance/" // "/Users/raphaelmansuy/Downloads/input_parquet/"
+
+  // val pathInputParquet = "/Users/raphaelmansuy/Downloads/input_parquet/"
+//  val pathOutputParquet = "/Users/raphaelmansuy/Downloads/output_parquet/"

@@ -12,25 +12,63 @@ import org.apache.log4j.{Level, Logger}
 
 import org.apache.spark.storage.StorageLevel
 
+import zio.cli.HelpDoc.Span.text
+import zio.cli._
+import zio.stream.{ZPipeline, ZSink, ZStream}
+
+import java.nio.file.Path
+
 // A cli app that reads a parquet file, coalesce it and write it to a new parquet file
-object App extends ZIOAppDefault {
+object App extends ZIOCliDefault {
 
-  import zio.spark.sql.TryAnalysis.syntax.throwAnalysisException
+  sealed trait Subcommand
+  object Subcommand {
+    final case class Coalesce(
+        inputPath: String,
+        outputhPath: String,
+        blockSize: Int
+    ) extends Subcommand
+  }
 
-//  val pathInputParquet =
-//    "/Users/raphaelmansuy/Downloads/dkt_tables/bronze/store_item_follow"
-  val pathInputParquet =
-    "s3a://ookla-open-data/parquet/performance/type=fixed/year=2022"
+  val blockSizeOption = Options.integer("block-size").alias("b")
+  val sourcePathArgument = Args.text("source-path")
+  val outputPathArgument = Args.text("output-path")
 
-//  val pathInputParquet =
-//    "s3a://ookla-open-data/parquet/performance/" // "/Users/raphaelmansuy/Downloads/input_parquet/"
+  val coalesceCommand =
+    Command(
+      "coalesce",
+      blockSizeOption,
+      sourcePathArgument ++ outputPathArgument
+    ).map { case (blockSize, (source, output)) =>
+      Subcommand.Coalesce(source, output, blockSize.toInt * 1024 * 1024)
+    }
 
-  // val pathInputParquet = "/Users/raphaelmansuy/Downloads/input_parquet/"
-  val pathOutputParquet = "/Users/raphaelmansuy/Downloads/output_parquet/"
+  val cliApp = CliApp.make(
+    name = "Coalesce parquet files",
+    version = "0.0.1",
+    summary = text("Coalesce parquet files"),
+    footer = HelpDoc.p("©Copyright 2022"),
+    command = coalesceCommand
+  )((subcommand: Subcommand) => {
+    subcommand match {
+      case Subcommand.Coalesce(inputPath, outputPath, blockSize) =>
+        {
+          for {
+            _ <- coalescePipeline(
+              inputPath,
+              outputPath,
+              blockSize
+            )
+          } yield ()
+        }.provideLayer(session)
+    }
+  })
 
-  // Votre programme
-  def program: SIO[Unit] = for {
-
+  def coalescePipeline(
+      pathInputParquet: String,
+      pathOutputParquet: String,
+      blockSize: Int
+  ): SIO[Unit] = for {
     _ <- ZIO.log("🚀 🚀 🚀 Application started")
 
     inputDataFrame <- DataFrameUtil.readParquetAndPersist(pathInputParquet)
@@ -66,5 +104,4 @@ object App extends ZIOAppDefault {
   private val session: ZLayer[Any, Throwable, SparkSession] =
     SparkSessionLayer.session
 
-  override def run: ZIO[ZIOAppArgs, Any, Any] = program.provide(session)
 }
