@@ -30,9 +30,9 @@ object App extends ZIOCliDefault {
     ) extends Subcommand
   }
 
-  val blockSizeOption = Options.integer("block-size").alias("b")
-  val sourcePathArgument = Args.text("source-path")
-  val outputPathArgument = Args.text("output-path")
+  val blockSizeOption = Options.integer("block-size") ?? "The block size in MB"
+  val sourcePathArgument = Args.text("source-path") ?? "The source path such as s3a://bucket/path"
+  val outputPathArgument = Args.text("output-path") ?? "The output path such as /tmp/output.parquet"
 
   val coalesceCommand =
     Command(
